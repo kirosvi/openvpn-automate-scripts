@@ -1,0 +1,63 @@
+server {
+	listen 80;
+	server_name ovpn.example.com;
+	return 301 https://$server_name$request_uri;
+
+}
+
+
+#limit_req_zone $bruteforce_var zone=bruteforce_zone:1m rate=10r/m;
+#map $request_method $bruteforce_var {
+#	default $binary_remote_addr;
+#	POST $binary_remote_addr;
+#}
+
+server {
+    listen 443;
+    server_name ovpn.example.com;
+
+    ssl on;
+    ssl_certificate /etc/pki/example.com/bundle.crt;
+    ssl_certificate_key /etc/pki/example.com/private.key;
+    ssl_dhparam /etc/pki/example.com/dhparam.pem;
+
+    ssl_session_timeout 24h;
+    ssl_session_cache shared:SSL:2m;
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_ciphers EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH:kEECDH+AES128:kEECDH:kEDH:-3DES:kRSA+AES128:kEDH+3DES:DES-CBC3-SHA:!RC4:!aNULL:!eNULL:!MD5:!EXPORT:!LOW:!SEED:!CAMELLIA:!IDEA:!PSK:!SRP:!SSLv2;
+    ssl_prefer_server_ciphers on;
+	root /var/www/html/ovpn/;
+	auth_basic "Restricted Area";
+	auth_basic_user_file /var/www/html/ovpn/.htpasswd;
+
+    location / {
+	rewrite ^/download/(.*) /download.php?path=$1 last;
+        limit_req   zone=one  burst=1 nodelay;
+
+    }
+
+    location ~ \.php$ {
+        limit_req   zone=one  burst=1 nodelay;
+        try_files $uri =404;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        #fastcgi_pass 127.0.0.1:9000;
+        fastcgi_pass unix:/run/php/php7.0-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+    }
+    location /protected/ {
+        root /var/www/html/ovpn;
+        internal;
+        limit_req   zone=one  burst=1 nodelay;
+    }
+
+	location ~ /\. {
+		deny all;
+		access_log off;
+		log_not_found off;
+	}
+
+
+}

@@ -1,0 +1,3 @@
+service_port: 8080
+service_script: vpn-create-config.sh
+service_binary_url: https://${bucket-address}/vpn-daemon/vpn-script-daemon-0.0.1

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run daemon to automate vpn creation script
+
+[Service]
+User=root
+WorkingDirectory=/root
+ExecStart=/root/vpn-script-daemon -s {{ service_script }} -port {{ service_port }}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,49 @@
+stages:
+  - build
+  - save
+
+services:
+  - docker:20.10.12-dind
+
+variables:
+  DOCKER_HOST: tcp://docker:2376
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_TLS_VERIFY: 1
+  DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
+
+before_script:
+  - i=0; while [ "$i" -lt 12 ]; do docker info && break; sleep 5; i=$(( i + 1 )) ; done
+
+
+build:
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: always
+      allow_failure: false
+  stage: build
+  image: golang:1.18
+  before_script:
+    - pwd
+    - ls -la
+  script:
+    - CGO_ENABLED=0 GOOS=linux go build -o bin/vpn-script-daemon
+  artifacts:
+    paths:
+      - bin/
+    expire_in: 1 day
+  tags:
+    - k8s-stage
+
+save:
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: always
+      allow_failure: true
+  stage: save
+  dependencies:
+    - build
+  image: google/cloud-sdk
+  script:
+    - gsutil cp ${CI_PROJECT_DIR}/bin/vpn-script-daemon gs://${BUCKET-ADDRESS}/vpn-script-daemon-${CI_COMMIT_TAG}
+  tags:
+    - k8s-stage

@@ -1,0 +1,5 @@
+---
+- name: Configure instance
+  hosts: openvpn-server
+  roles:
+    - vpn-script-daemon

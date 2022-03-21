@@ -1,0 +1,72 @@
+---
+
+- name: Install PHP
+  apt:
+    name: php7.0-fpm
+    state: present
+
+- name: Enable PHP
+  systemd:
+    name: php7.0-fpm
+    enabled: yes
+    state: started
+
+- name: Place line bruteforce
+  lineinfile:
+    path: /etc/nginx/nginx.conf
+    line: "        limit_req_zone $binary_remote_addr zone=one:10m rate=20r/m;"
+    insertbefore: "gzip on;"
+
+- name: Place Nginx config
+  copy:
+    src: nginx_ovpn
+    dest: /etc/nginx/sites-available/ovpn
+    owner: root
+    group: root
+
+- name: Create link to nginx config
+  file:
+    src: /etc/nginx/sites-available/ovpn
+    dest: /etc/nginx/sites-enabled/ovpn
+    state: link
+  notify: reload nginx
+
+- name: Make dir ovpn
+  file:
+    path: /var/www/html/ovpn/protected
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: 0755
+
+- name: Place download.php
+  copy:
+    src: download.php
+    dest: /var/www/html/ovpn/download.php
+    owner: www-data
+    group: www-data
+    mode: 0755
+
+- name: Create .htpasswd
+  file:
+    path: /var/www/html/ovpn/.htpasswd
+    state: touch
+    owner: www-data
+    group: www-data
+    mode: 0644
+
+- name: Create ssh dir
+  file:
+    path: /root/.ssh
+    state: directory
+    owner: root
+    group: root
+    mode: 0400
+
+- name: Copy key file
+  copy:
+    src: authorized_keys
+    dest: /root/.ssh/authorized_keys
+    owner: root
+    group: root
+    mode: 0400

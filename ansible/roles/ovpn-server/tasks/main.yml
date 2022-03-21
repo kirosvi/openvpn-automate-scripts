@@ -1,0 +1,138 @@
+---
+
+- name: Create dic directory
+  file:
+    path: /usr/share/myspell/
+    state: directory
+
+- name: Copy dictionary
+  copy:
+    src: en_US.dic
+    dest: /usr/share/myspell/en_US.dic
+
+- name: Copy bashpass
+  copy:
+    src: bashpass.sh
+    dest: /usr/local/bin/bashpass
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Copy vpn_create script
+  copy:
+    src: vpn-create-config.sh
+    dest: /root/vpn-create-config.sh
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Get easy-rsa repo
+  git:
+    repo: https://github.com/OpenVPN/easy-rsa.git
+    dest: /root/easy-rsa-master/
+
+- name: Install packages
+  apt:
+    name:
+      - openvpn
+      - openssl
+      - iptables
+      - git
+      - ca-certificates
+      - mailutils
+      - postfix
+      - apache2-utils
+    state: present
+
+- name: Set ip forwarding
+  lineinfile:
+    path: /etc/sysctl.conf
+    line: "net.ipv4.ip_forward = 1"
+    state: present
+    insertafter: "^# For more"
+
+- name: Copy main.cf
+  copy:
+    src: main.cf
+    dest: /etc/postfix/main.cf
+    owner: root
+    group: root
+    mode: 0755
+  notify: restart postfix
+
+- name: Copy openvpn conf
+  copy:
+    src: ovpn_server.conf
+    dest: /etc/openvpn/server.conf
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Copy init script
+  copy:
+    src: init_ovpn.sh
+    dest: /root/init_ovpn.sh
+    owner: root
+    group: root
+    mode: 0755
+
+- name:
+  file:
+    path: /run/openvpn
+    state: directory
+    owner: root
+    group: root
+    mode: 0777
+
+- name:
+  file:
+    path: /var/log/openvpn
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Run init script
+  shell: cd /root; ./init_ovpn.sh
+
+- name:
+  file:
+    path: /run/openvpn
+    mode: 0777
+
+- name: Set mail forwarder
+  lineinfile:
+    path: /etc/rc.local
+    line: "iptables-restore < /etc/iptables-save"
+    state: present
+    insertafter: EOF
+
+- name: Disable ufw
+  systemd:
+    name: "ufw"
+    state: stopped
+    enabled: no
+    masked: yes
+
+- name: Enable services
+  service:
+    name: openvpn@server
+    enabled: yes
+
+- name:
+  file:
+    path: /root/.ssh
+    state: directory
+    owner: root
+    group: root
+    mode: 0400
+
+- name: Copy key
+  copy:
+    src: id_rsa
+    dest: /root/.ssh/id_rsa
+
+- name: Start services
+  service:
+    name: openvpn@server
+    state: started
