@@ -6,8 +6,10 @@ ovpn server:
   - send emails with instructions
 
 storage server:
-  - give vpn keys to clients through ngixn and basic auth
+  - give vpn keys to clients through nginx and basic auth
 
+
+added daemon to automate bash script with http requests from corp portal
 
 TODO:
   - fix mail settings to send via gmail application token
